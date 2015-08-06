@@ -19,6 +19,10 @@ General system tools:
 Additional package
 - JFR-PerlModules  - https://github.com/josephryan/JFR-PerlModules
 
+BWA
+- http://bio-bwa.sourceforge.net/
+- This is currently the only aligner that works with FastqSifter
+
 ## INSTALLATION
 
 To install `FastqSifter` and documentation, type the following:
