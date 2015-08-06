@@ -5,6 +5,7 @@
 I appreciate hearing about your experience with the program.
 
 `FastqSifter` This program will take a FASTA sequence (e.g., mitochondrial genome sequence) and align a set of reads (left, right, and optionally unpaired) using bwa and then remove reads that align from the original set of reads.  It will optionally save the aligned reads as well.
+
 =======
 ## AVAILABILITY
 
