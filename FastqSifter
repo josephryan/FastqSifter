@@ -1,0 +1,207 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use JFR::Fastq;
+use Getopt::Long;
+use Pod::Usage;
+use Data::Dumper;
+
+our $VERSION = 0.02;
+
+MAIN: {
+    my $rh_o = process_options();
+    make_index($rh_o->{'fasta'});
+    bwa_aln($rh_o);
+    make_sam_files($rh_o);
+    if ($rh_o->{'unp'}) {
+        my $rh_se_ids = get_ids("$rh_o->{'out'}.bwa.samse.sam");
+        filter($rh_se_ids,$rh_o,'unp');
+    }
+    my $rh_pe_ids = get_ids("$rh_o->{'out'}.bwa.sampe.sam");
+    filter($rh_pe_ids,$rh_o,'left');
+    filter($rh_pe_ids,$rh_o,'right');
+}
+
+sub filter {
+    my $rh_ids = shift;
+    my $rh_o = shift;
+    my $lrunp = shift;
+    my %map = ('unp' => 'unp', 'left', => 'A', 'right' => 'B');
+    my $in = $rh_o->{$lrunp};
+    my $out = "$rh_o->{'out'}.filtered.$map{$lrunp}.fq";
+    my $sifted_out = "$rh_o->{'out'}.sifted.$map{$lrunp}.fq";
+
+    open OUT, ">$out" or die "cannot open >$out:$!";
+    if ($rh_o->{'savereads'}) {
+        open MTOUT, ">$sifted_out" or die "cannot open >$sifted_out:$!";
+    }
+    my $fp = JFR::Fastq->new($in);
+    my $count = 0;
+    while (my $rec = $fp->get_record()) {
+        my $id = $rec->{'def'};
+        $id =~ s/^.//;
+        if ($rh_ids->{$id}) {
+            $count++;
+            if ($rh_o->{'savereads'}) {
+                print MTOUT "$rec->{'def'}\n$rec->{'seq'}\n";
+                print MTOUT "+\n$rec->{'qual'}\n";
+            }
+        } else {
+            print OUT "$rec->{'def'}\n$rec->{'seq'}\n+\n$rec->{'qual'}\n";
+        }
+    }
+    print "Filtered $count sequences from $in to $out\n";
+}
+
+sub make_index {
+    my $fasta = shift;
+    system "bwa index $fasta\n";
+}
+
+sub get_ids {
+    my $file = shift;
+    my %ids = ();
+    open IN, $file or die "cannot open $file:$!";
+    while (my $line = <IN>) {
+        chomp $line;
+        next if ($line =~ m/^\s*\[/);
+        next if ($line =~ m/^\s*\@/);
+        next if ($line =~ m/^\s*$/);
+        my @fields = split /\t/, $line;
+        next unless ($fields[2]); # avoid strange line in SAM file: "0.42 sec"
+        next if ($fields[2] eq '*');
+        $ids{$fields[0]}++;
+    }
+    return \%ids;
+}
+
+sub bwa_aln {
+    my $rh_o = shift;
+    system "bwa aln -o 0 -t $rh_o->{'threads'} $rh_o->{'fasta'} $rh_o->{'left'} > $rh_o->{'out'}.bwa.A.sai";
+    system "bwa aln -o 0 -t $rh_o->{'threads'} $rh_o->{'fasta'} $rh_o->{'right'} > $rh_o->{'out'}.bwa.B.sai";
+    if ($rh_o->{'unp'}) {
+        system "bwa aln -o 0 -t $rh_o->{'threads'} $rh_o->{'fasta'} $rh_o->{'unp'} > $rh_o->{'out'}.bwa.unp.sai";
+    }
+}
+
+
+sub make_sam_files {
+    my $rh_o = shift;
+    system "bwa sampe $rh_o->{'fasta'} $rh_o->{'out'}.bwa.A.sai $rh_o->{'out'}.bwa.B.sai $rh_o->{'left'} $rh_o->{'right'} -f $rh_o->{'out'}.bwa.sampe.sam";
+    if ($rh_o->{'unp'}) {
+        system "bwa samse $rh_o->{'fasta'} $rh_o->{'out'}.bwa.unp.sai $rh_o->{'unp'} -f $rh_o->{'out'}.bwa.samse.sam"; 
+    }
+}
+
+sub process_options {
+    my $rh_opts = {};
+    my $opt_results = Getopt::Long::GetOptions(
+                              "version" => \$rh_opts->{'version'},
+                            "threads=i" => \$rh_opts->{'threads'},
+                                "out=s" => \$rh_opts->{'out'},
+                             "fastas=s" => \$rh_opts->{'fasta'},
+                               "left=s" => \$rh_opts->{'left'},
+                              "right=s" => \$rh_opts->{'right'},
+                                "unp=s" => \$rh_opts->{'unp'},
+                            "savereads" => \$rh_opts->{'savereads'},
+                                 "help" => \$rh_opts->{'help'});
+    $rh_opts->{'threads'} = 1 unless ($rh_opts->{'threads'});
+    die "$VERSION\n" if ($rh_opts->{'version'});
+    pod2usage({-exitval => 0, -verbose => 2}) if $rh_opts->{'help'};
+    unless ($rh_opts->{'left'} && $rh_opts->{'right'} && $rh_opts->{'fasta'} 
+            && $rh_opts->{'out'}) {
+        warn "missing --fasta\n"    unless ($rh_opts->{'fasta'});
+        warn "missing --left\n"  unless ($rh_opts->{'left'});
+        warn "missing --right\n" unless ($rh_opts->{'right'});
+        warn "missing --out\n"    unless ($rh_opts->{'out'});
+        usage();
+    }
+    return $rh_opts;
+}
+
+sub usage {
+    die "usage: $0 --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA --left=LEFT_FASTQ --right=RIGHT_FASTQ [--unp=UNPAIRED_FASTQ] [--savereads] [--version] [--help]\n";
+}
+
+__END__
+
+=head1 NAME
+
+B<FastqSifter> - Separate contaminating reads from FASTQ files 
+
+=head1 AUTHOR
+
+Joseph F. Ryan <joseph.ryan@whitney.ufl.edu>
+
+=head1 SYNOPSIS
+
+FastqSifter --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA --left=LEFT_FASTQ --right=RIGHT_FASTQ [--unp=UNPAIRED_FASTQ] [--savereads] [--version] [--help]
+
+=head1 DESCRIPTION
+
+This program will take a FASTA sequence (e.g., mitochondrial genome sequence) and align a set of reads (left, right, and optionally unpaired) using bwa and then remove reads that align from the original set of reads.  It will optionally save the aligned reads as well.
+
+requires: bwa
+
+=head1 BUGS
+
+Please report them to <joseph.ryan@whitney.ufl.edu>
+
+=head1 OPTIONS
+
+=over 2
+
+=item B<--out>
+
+Prefix for outfiles
+
+=item B<--FASTA>
+
+Contamination sequence (e.g., MT genome of species, Human genome)
+
+=item B<--left>
+
+Left reads in fastq format (can be compressed with gz suffix or not)
+
+=item B<--right>
+
+Right reads in fastq format (can be compressed with gz suffix or not)
+
+=item B<--unp>
+
+Unpaired reads in fastq format (can be compressed with gz suffix or not)
+optional
+
+=item B<--savereads>
+
+Optionally create a fastq file with all reads that match COTAM_FASTA
+
+=item B<--version>
+
+Print the program version and exit
+
+=item B<--help>
+
+Print this manual
+
+=back
+
+=head1 COPYRIGHT
+
+Copyright (C) 2015 Joseph F. Ryan
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+=cut
