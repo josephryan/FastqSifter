@@ -7,7 +7,7 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
 
-our $VERSION = 0.02;
+our $VERSION = 0.03;
 
 MAIN: {
     my $rh_o = process_options();
@@ -18,9 +18,11 @@ MAIN: {
         my $rh_se_ids = get_ids("$rh_o->{'out'}.bwa.samse.sam");
         filter($rh_se_ids,$rh_o,'unp');
     }
-    my $rh_pe_ids = get_ids("$rh_o->{'out'}.bwa.sampe.sam");
-    filter($rh_pe_ids,$rh_o,'left');
-    filter($rh_pe_ids,$rh_o,'right');
+    if ($rh_o->{'left'}) {
+        my $rh_pe_ids = get_ids("$rh_o->{'out'}.bwa.sampe.sam");
+        filter($rh_pe_ids,$rh_o,'left');
+        filter($rh_pe_ids,$rh_o,'right');
+    }
 }
 
 sub filter {
@@ -38,9 +40,12 @@ sub filter {
     }
     my $fp = JFR::Fastq->new($in);
     my $count = 0;
+    my $total = 0;
     while (my $rec = $fp->get_record()) {
+        $total++;
         my $id = $rec->{'def'};
         $id =~ s/^.//;
+        $id =~ s/ .+$//;
         if ($rh_ids->{$id}) {
             $count++;
             if ($rh_o->{'savereads'}) {
@@ -51,7 +56,9 @@ sub filter {
             print OUT "$rec->{'def'}\n$rec->{'seq'}\n+\n$rec->{'qual'}\n";
         }
     }
+    print "$total sequences were processed from $in\n";
     print "Filtered $count sequences from $in to $out\n";
+    print "Sifted sequences were written to $sifted_out\n\n";
 }
 
 sub make_index {
@@ -109,19 +116,48 @@ sub process_options {
     $rh_opts->{'threads'} = 1 unless ($rh_opts->{'threads'});
     die "$VERSION\n" if ($rh_opts->{'version'});
     pod2usage({-exitval => 0, -verbose => 2}) if $rh_opts->{'help'};
-    unless ($rh_opts->{'left'} && $rh_opts->{'right'} && $rh_opts->{'fasta'} 
-            && $rh_opts->{'out'}) {
+
+    my $usage_flag = 0;
+    unless ($rh_opts->{'fasta'} && $rh_opts->{'out'}) {
         warn "missing --fasta\n"    unless ($rh_opts->{'fasta'});
-        warn "missing --left\n"  unless ($rh_opts->{'left'});
-        warn "missing --right\n" unless ($rh_opts->{'right'});
         warn "missing --out\n"    unless ($rh_opts->{'out'});
-        usage();
+        $usage_flag = 1;
     }
+    unless (($rh_opts->{'left'} && $rh_opts->{'right'}) || $rh_opts->{'unp'}) {
+        warn "included right but missing --left\n" if ($rh_opts->{'right'});
+        warn "included left but missing --right\n" if ($rh_opts->{'left'});
+        unless ($rh_opts->{'left'} || $rh_opts->{'right'}) {
+            warn "either need --unp and/or (--right & --left)\n";
+        }
+        $usage_flag = 1;
+        
+    }
+    usage() if ($usage_flag);
+
+    check_if_files_exist($rh_opts);
+
     return $rh_opts;
 }
 
+sub check_if_files_exist {
+    my $rh_opts = shift;
+
+    unless (-e $rh_opts->{'fasta'}) {
+        die "file $rh_opts->{'fasta'} does not exist";
+    }
+    if ($rh_opts->{'right'} && !(-e $rh_opts->{'right'})) {
+        die "file $rh_opts->{'right'} does not exist";
+    }
+    if ($rh_opts->{'left'} && !(-e $rh_opts->{'left'})) {
+        die "file $rh_opts->{'left'} does not exist";
+    }
+    if ($rh_opts->{'unp'} && !(-e $rh_opts->{'unp'})) {
+        die "file $rh_opts->{'unp'} does not exist";
+    }
+}
+
 sub usage {
-    die "usage: $0 --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA --left=LEFT_FASTQ --right=RIGHT_FASTQ [--unp=UNPAIRED_FASTQ] [--savereads] [--version] [--help]\n";
+    die "usage: $0 --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA {--left=LEFT_FASTQ --right=RIGHT_FASTQ and/or --unp=UNPAIRED_FASTQ} [--savereads] [--version] [--help]\n";
 }
 
 __END__
@@ -136,13 +172,13 @@ Joseph F. Ryan <joseph.ryan@whitney.ufl.edu>
 
 =head1 SYNOPSIS
 
-FastqSifter --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA --left=LEFT_FASTQ --right=RIGHT_FASTQ [--unp=UNPAIRED_FASTQ] [--savereads] [--version] [--help]
+FastqSifter --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA {--left=LEFT_FASTQ --right=RIGHT_FASTQ and/or --unp=UNPAIRED_FASTQ} [--savereads] [--version] [--help]
 
 =head1 DESCRIPTION
 
-This program will take a FASTA sequence (e.g., mitochondrial genome sequence) and align a set of reads (left, right, and optionally unpaired) using bwa and then remove reads that align from the original set of reads.  It will optionally save the aligned reads as well.
+This program will take a FASTA sequence (e.g., mitochondrial genome sequence) and align a set of reads (left and right, and/or unpaired) using bwa and then remove reads that align from the original set of reads.  It will optionally save the aligned reads as well.
 
-requires: bwa
+requires: bwa, JFR::Fastq
 
 =head1 BUGS
 
