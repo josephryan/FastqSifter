@@ -38,8 +38,8 @@ If you do not have permission to install to the system see the following:
 ## RUN
 
     FastqSifter --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA
-       --left=LEFT_FASTQ --right=RIGHT_FASTQ [--unp=UNPAIRED_FASTQ]
-       [--savereads] [--version] [--help]
+       --left=LEFT_FASTQ --right=RIGHT_FASTQ [--threads=NUM_THREADS]
+       [--unp=UNPAIRED_FASTQ] [--savereads] [--version] [--help]
 
 ## DOCUMENTATION
 
