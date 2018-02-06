@@ -7,7 +7,7 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
 
-our $VERSION = 0.03;
+our $VERSION = 0.04;
 
 MAIN: {
     my $rh_o = process_options();
@@ -157,7 +157,7 @@ sub check_if_files_exist {
 }
 
 sub usage {
-    die "usage: $0 --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA {--left=LEFT_FASTQ --right=RIGHT_FASTQ and/or --unp=UNPAIRED_FASTQ} [--savereads] [--version] [--help]\n";
+    die "usage: $0 --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA {--left=LEFT_FASTQ --right=RIGHT_FASTQ and/or --unp=UNPAIRED_FASTQ} [--threads=NUM_THREADS] [--savereads] [--version] [--help]\n";
 }
 
 __END__
@@ -172,7 +172,7 @@ Joseph F. Ryan <joseph.ryan@whitney.ufl.edu>
 
 =head1 SYNOPSIS
 
-FastqSifter --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA {--left=LEFT_FASTQ --right=RIGHT_FASTQ and/or --unp=UNPAIRED_FASTQ} [--savereads] [--version] [--help]
+FastqSifter --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA {--left=LEFT_FASTQ --right=RIGHT_FASTQ and/or --unp=UNPAIRED_FASTQ} [--threads=NUM_THREADS] [--savereads] [--version] [--help]
 
 =head1 DESCRIPTION
 
