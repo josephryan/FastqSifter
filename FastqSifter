@@ -190,7 +190,7 @@ Please report them to <joseph.ryan@whitney.ufl.edu>
 
 =item B<--out>
 
-Prefix for outfiles
+Prefix for outfiles. Filtered reads will have the word "filtered" in the name (e.g. blarg.filtered.A.fq if "blarg" was the prefix)
 
 =item B<--FASTA>
 
@@ -211,7 +211,7 @@ optional
 
 =item B<--savereads>
 
-Optionally create a fastq file with all reads that match COTAM_FASTA
+Optionally create a fastq file with all reads that match CONTAM_FASTA. These reads will have *sifted* in the name (e.g., blarg.sifted.A.fq)
 
 =item B<--version>
 
