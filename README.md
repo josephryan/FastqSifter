@@ -44,13 +44,68 @@ If you do not have permission to install to the system see the following:
 ## DOCUMENTATION
 
 Documentation is embedded inside of `FastqSifter` in POD format and
-can be viewed by running any of the following:
+can be viewed by running any of the following (it is also below):
 
         FastqSifter --help
         perldoc FastqSifter
         man FastqSifter  # available after installation
 
-## COPYRIGHT AND LICENSE
+**FastqSifter** - Separate contaminating reads from FASTQ files 
+
+# AUTHOR
+
+Joseph F. Ryan <joseph.ryan@whitney.ufl.edu>
+
+# SYNOPSIS
+
+FastqSifter --out=PREFIX\_FOR\_OUTFILES --fasta=CONTAM\_FASTA {--left=LEFT\_FASTQ --right=RIGHT\_FASTQ and/or --unp=UNPAIRED\_FASTQ} \[--threads=NUM\_THREADS\] \[--savereads\] \[--version\] \[--help\]
+
+# DESCRIPTION
+
+This program will take a FASTA sequence (e.g., mitochondrial genome sequence) and align a set of reads (left and right, and/or unpaired) using bwa and then remove reads that align from the original set of reads.  It will optionally save the aligned reads as well.
+
+requires: bwa, JFR::Fastq
+
+# BUGS
+
+Please report them to <joseph.ryan@whitney.ufl.edu>
+
+# OPTIONS
+
+- **--out**
+
+    Prefix for outfiles. Filtered reads will have the word "filtered" in the name (e.g. blarg.filtered.A.fq if "blarg" was the prefix)
+
+- **--FASTA**
+
+    Contamination sequence (e.g., MT genome of species, Human genome)
+
+- **--left**
+
+    Left reads in fastq format (can be compressed with gz suffix or not)
+
+- **--right**
+
+    Right reads in fastq format (can be compressed with gz suffix or not)
+
+- **--unp**
+
+    Unpaired reads in fastq format (can be compressed with gz suffix or not)
+    optional
+
+- **--savereads**
+
+    Optionally create a fastq file with all reads that match CONTAM\_FASTA. These reads will have \*sifted\* in the name (e.g., blarg.sifted.A.fq)
+
+- **--version**
+
+    Print the program version and exit
+
+- **--help**
+
+    Print this manual
+
+# COPYRIGHT
 
 Copyright (C) 2015 Joseph F. Ryan
 
@@ -65,5 +120,4 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program in the file LICENSE.  If not, see
-http://www.gnu.org/licenses/.
+along with this program.  If not, see &lt;http://www.gnu.org/licenses/>.
