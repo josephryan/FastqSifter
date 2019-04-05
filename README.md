@@ -22,6 +22,8 @@ Additional package
 BWA
 - http://bio-bwa.sourceforge.net/
 - This is currently the only aligner that works with FastqSifter
+- bwa should be in your path 
+  (or you can change the $BWA variable to point to the full path to bwa)
 
 ## INSTALLATION
 
