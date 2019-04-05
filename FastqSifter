@@ -8,6 +8,7 @@ use Pod::Usage;
 use Data::Dumper;
 
 our $VERSION = 1.1.2;
+our $BWA = 'bwa'; # will work as-is if bwa is in $PATH, can edit to full path
 
 MAIN: {
     my $rh_o = process_options();
@@ -63,7 +64,7 @@ sub filter {
 
 sub make_index {
     my $fasta = shift;
-    system "bwa index $fasta\n";
+    system "$BWA index $fasta\n";
 }
 
 sub get_ids {
@@ -85,19 +86,19 @@ sub get_ids {
 
 sub bwa_aln {
     my $rh_o = shift;
-    system "bwa aln -o 0 -t $rh_o->{'threads'} $rh_o->{'fasta'} $rh_o->{'left'} > $rh_o->{'out'}.bwa.A.sai";
-    system "bwa aln -o 0 -t $rh_o->{'threads'} $rh_o->{'fasta'} $rh_o->{'right'} > $rh_o->{'out'}.bwa.B.sai";
+    system "$BWA aln -o 0 -t $rh_o->{'threads'} $rh_o->{'fasta'} $rh_o->{'left'} > $rh_o->{'out'}.bwa.A.sai";
+    system "$BWA aln -o 0 -t $rh_o->{'threads'} $rh_o->{'fasta'} $rh_o->{'right'} > $rh_o->{'out'}.bwa.B.sai";
     if ($rh_o->{'unp'}) {
-        system "bwa aln -o 0 -t $rh_o->{'threads'} $rh_o->{'fasta'} $rh_o->{'unp'} > $rh_o->{'out'}.bwa.unp.sai";
+        system "$BWA aln -o 0 -t $rh_o->{'threads'} $rh_o->{'fasta'} $rh_o->{'unp'} > $rh_o->{'out'}.bwa.unp.sai";
     }
 }
 
 
 sub make_sam_files {
     my $rh_o = shift;
-    system "bwa sampe $rh_o->{'fasta'} $rh_o->{'out'}.bwa.A.sai $rh_o->{'out'}.bwa.B.sai $rh_o->{'left'} $rh_o->{'right'} -f $rh_o->{'out'}.bwa.sampe.sam";
+    system "$BWA sampe $rh_o->{'fasta'} $rh_o->{'out'}.bwa.A.sai $rh_o->{'out'}.bwa.B.sai $rh_o->{'left'} $rh_o->{'right'} -f $rh_o->{'out'}.bwa.sampe.sam";
     if ($rh_o->{'unp'}) {
-        system "bwa samse $rh_o->{'fasta'} $rh_o->{'out'}.bwa.unp.sai $rh_o->{'unp'} -f $rh_o->{'out'}.bwa.samse.sam"; 
+        system "$BWA samse $rh_o->{'fasta'} $rh_o->{'out'}.bwa.unp.sai $rh_o->{'unp'} -f $rh_o->{'out'}.bwa.samse.sam"; 
     }
 }
 
