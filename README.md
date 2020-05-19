@@ -4,7 +4,7 @@
 
 I appreciate hearing about your experience with the program.
 
-`FastqSifter` accepts a FASTA sequence (e.g., mitochondrial genome sequence), will align a set of reads (left, right, and optionally unpaired) to this sequence using bwa, then remove reads that align from the original set of reads, and optionally save the aligned reads to a separate FASTQ file.
+`FastqSifter` accepts a FASTA sequence (e.g., mitochondrial genome, symbiont genome , potential contaminant genome), will align a set of reads (left, right, and optionally unpaired) to this sequence using bwa, then remove reads that align from the original set of reads, and optionally save the aligned reads to a separate FASTQ file.
 
 =======
 ## AVAILABILITY
