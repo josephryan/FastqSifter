@@ -97,7 +97,7 @@ Please report them to <joseph.ryan@whitney.ufl.edu>
 
 - **--savereads**
 
-    Optionally create a fastq file with all reads that match CONTAM\_FASTA. These reads will have \*sifted\* in the name (e.g., blarg.sifted.A.fq)
+    Optionally create a FASTQ file with all reads that match the provided FASTA file. These reads will have \*matched\* in the name (e.g., blarg.matched.A.fq)
 
 - **--version**
 
