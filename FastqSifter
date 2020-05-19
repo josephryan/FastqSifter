@@ -7,7 +7,7 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
 
-our $VERSION = 1.1.3;
+our $VERSION = 1.2.0;
 our $BWA = 'bwa'; # will work as-is if bwa is in $PATH, can edit to full path
 
 MAIN: {
@@ -33,11 +33,11 @@ sub filter {
     my %map = ('unp' => 'unp', 'left', => 'A', 'right' => 'B');
     my $in = $rh_o->{$lrunp};
     my $out = "$rh_o->{'out'}.filtered.$map{$lrunp}.fq";
-    my $sifted_out = "$rh_o->{'out'}.sifted.$map{$lrunp}.fq";
+    my $matched_out = "$rh_o->{'out'}.matched.$map{$lrunp}.fq";
 
     open OUT, ">$out" or die "cannot open >$out:$!";
     if ($rh_o->{'savereads'}) {
-        open MTOUT, ">$sifted_out" or die "cannot open >$sifted_out:$!";
+        open MTOUT, ">$matched_out" or die "cannot open >$matched_out:$!";
     }
     my $fp = JFR::Fastq->new($in);
     my $count = 0;
@@ -59,7 +59,11 @@ sub filter {
     }
     print "$total sequences were processed from $in\n";
     print "Filtered $count sequences from $in to $out\n";
-    print "Sifted sequences were written to $sifted_out\n\n";
+    if ($rh_o->{'savereads'}) {
+        print "Reads that matched $rh_o->{'fasta'} were written to ";
+        print "$matched_out\n";
+    }
+    print "\n";
 }
 
 sub make_index {
@@ -177,7 +181,7 @@ FastqSifter --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA {--left=LEFT_FASTQ --
 
 =head1 DESCRIPTION
 
-This program will take a FASTA sequence (e.g., mitochondrial genome sequence) and align a set of reads (left and right, and/or unpaired) using bwa and then remove reads that align from the original set of reads.  It will optionally save the aligned reads as well.
+This program will take a FASTA sequence (e.g., mitochondrial genome sequence, symbiont genome, genome of suspected contaminant) and align a set of reads (left and right, and/or unpaired) using bwa and then remove reads that align from the original set of reads.  It will optionally save the aligned (matched) reads as well.
 
 requires: bwa, JFR::Fastq
 
@@ -195,24 +199,24 @@ Prefix for outfiles. Filtered reads will have the word "filtered" in the name (e
 
 =item B<--FASTA>
 
-Contamination sequence (e.g., MT genome of species, Human genome)
+FASTA sequence(s) that comprise reads you would like to separate or remove (e.g., MT genome of species, symbiont genome, genome of potential contaminant)
 
 =item B<--left>
 
-Left reads in fastq format (can be compressed with gz suffix or not)
+Left reads in FASTQ format (can be compressed with gz suffix or not)
 
 =item B<--right>
 
-Right reads in fastq format (can be compressed with gz suffix or not)
+Right reads in FASTQ format (can be compressed with gz suffix or not)
 
 =item B<--unp>
 
-Unpaired reads in fastq format (can be compressed with gz suffix or not)
+Unpaired reads in FASTQ format (can be compressed with gz suffix or not)
 optional
 
 =item B<--savereads>
 
-Optionally create a fastq file with all reads that match CONTAM_FASTA. These reads will have *sifted* in the name (e.g., blarg.sifted.A.fq)
+Optionally create a FASTQ file with all reads that match provided FASTA. These reads will have *matched* in the name (e.g., blarg.matched.A.fq)
 
 =item B<--version>
 
@@ -226,7 +230,7 @@ Print this manual
 
 =head1 COPYRIGHT
 
-Copyright (C) 2015 Joseph F. Ryan
+Copyright (C) 2015,2016,2017,2018,2019,2020 Joseph F. Ryan
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
