@@ -4,10 +4,11 @@ use strict;
 use warnings;
 use JFR::Fastq;
 use Getopt::Long;
+use IO::Compress::Gzip qw(gzip $GzipError);
 use Pod::Usage;
 use Data::Dumper;
 
-our $VERSION = 1.3;
+our $VERSION = 1.4;
 our $BWA = 'bwa'; # will work as-is if bwa is in $PATH, can edit to full path
 
 MAIN: {
@@ -34,11 +35,16 @@ sub filter {
     my $in = $rh_o->{$lrunp};
     my $out = "$rh_o->{'out'}.filtered.$map{$lrunp}.fq";
     my $matched_out = "$rh_o->{'out'}.matched.$map{$lrunp}.fq";
-
-    open OUT, ">$out" or die "cannot open >$out:$!";
-    if ($rh_o->{'savereads'}) {
-        open MTOUT, ">$matched_out" or die "cannot open >$matched_out:$!";
-    }
+    my $outfh;
+    my $mtoutfh;
+    
+    if ($rh_o->{'gzipout'}) {
+        $outfh = new IO::Compress::Gzip "${out}.gz" or die "IO::Compress::Gzip failed: $GzipError\n";
+        $mtoutfh = new IO::Compress::Gzip "${matched_out}.gz" or die "IO::Compress::Gzip failed: $GzipError\n" if ($rh_o->{'savereads'});
+    } else {
+        open($outfh,">",$out) or die "cannot open $out:$!";
+        open($mtoutfh,">",$matched_out) or die "cannot open $matched_out:$!" if ($rh_o->{'savereads'});
+    }    
     my $fp = JFR::Fastq->new($in);
     my $count = 0;
     my $total = 0;
@@ -50,18 +56,22 @@ sub filter {
         if ($rh_ids->{$id}) {
             $count++;
             if ($rh_o->{'savereads'}) {
-                print MTOUT "$rec->{'def'}\n$rec->{'seq'}\n";
-                print MTOUT "+\n$rec->{'qual'}\n";
+                print $mtoutfh "$rec->{'def'}\n$rec->{'seq'}\n";
+                print $mtoutfh "+\n$rec->{'qual'}\n";
             }
         } else {
-            print OUT "$rec->{'def'}\n$rec->{'seq'}\n+\n$rec->{'qual'}\n";
+            print $outfh "$rec->{'def'}\n$rec->{'seq'}\n+\n$rec->{'qual'}\n";
         }
     }
     print "$total sequences were processed from $in\n";
-    print "Filtered $count sequences from $in to $out\n";
+    print "Filtered $count sequences from $in to $out";
+    print ".gz" if ($rh_o->{'gzipout'});
+    print "\n";
     if ($rh_o->{'savereads'}) {
         print "Reads that matched $rh_o->{'fasta'} were written to ";
-        print "$matched_out\n";
+        print "$matched_out";
+        print ".gz" if ($rh_o->{'gzipout'});
+        print "\n";
     }
     print "\n";
 }
@@ -116,6 +126,7 @@ sub process_options {
                                "left=s" => \$rh_opts->{'left'},
                               "right=s" => \$rh_opts->{'right'},
                                 "unp=s" => \$rh_opts->{'unp'},
+                              "gzipout" => \$rh_opts->{'gzipout'},
                             "savereads" => \$rh_opts->{'savereads'},
                                  "help" => \$rh_opts->{'help'});
     $rh_opts->{'threads'} = 1 unless ($rh_opts->{'threads'});
@@ -165,7 +176,7 @@ sub check_if_files_exist {
 }
 
 sub usage {
-    die "usage: $0 --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA {--left=LEFT_FASTQ --right=RIGHT_FASTQ and/or --unp=UNPAIRED_FASTQ} [--threads=NUM_THREADS] [--savereads] [--version] [--help]\n";
+    die "usage: $0 --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA {--left=LEFT_FASTQ --right=RIGHT_FASTQ and/or --unp=UNPAIRED_FASTQ} [--gzipout] [--threads=NUM_THREADS] [--savereads] [--version] [--help]\n";
 }
 
 __END__
@@ -180,7 +191,7 @@ Joseph F. Ryan <joseph.ryan@whitney.ufl.edu>
 
 =head1 SYNOPSIS
 
-FastqSifter --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA {--left=LEFT_FASTQ --right=RIGHT_FASTQ and/or --unp=UNPAIRED_FASTQ} [--threads=NUM_THREADS] [--savereads] [--version] [--help]
+FastqSifter --out=PREFIX_FOR_OUTFILES --fasta=CONTAM_FASTA {--left=LEFT_FASTQ --right=RIGHT_FASTQ and/or --unp=UNPAIRED_FASTQ} [--gzipout] [--threads=NUM_THREADS] [--savereads] [--version] [--help]
 
 =head1 DESCRIPTION
 
@@ -217,6 +228,14 @@ Right reads in FASTQ format (can be compressed with gz suffix or not)
 Unpaired reads in FASTQ format (can be compressed with gz suffix or not)
 optional
 
+=item B<--threads>
+
+Number of threads to use for bwa
+
+=item B<--gzipout>
+
+Resulting fastq files will be gzipped
+
 =item B<--savereads>
 
 Optionally create a FASTQ file with all reads that match provided FASTA. These reads will have *matched* in the name (e.g., blarg.matched.A.fq)
@@ -233,7 +252,7 @@ Print this manual
 
 =head1 COPYRIGHT
 
-Copyright (C) 2015,2016,2017,2018,2019,2020 Joseph F. Ryan
+Copyright (C) 2015,2016,2017,2018,2019,2020,2021 Joseph F. Ryan
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
